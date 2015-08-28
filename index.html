@@ -1,0 +1,133 @@
+<html>
+
+<head>
+     <link rel="stylesheet" href="./css/styles.css">
+
+
+</head>
+
+<body>
+
+    <div id="block" class="block"></div>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.2.2/backbone-min.js"></script>
+
+<script type="text/javascript">
+    $(function() {
+
+        var AppState = Backbone.Model.extend({
+            defaults: {
+                username: "",
+                state: "start"
+            }
+        });
+
+        var appState = new AppState();
+
+        var Controller = Backbone.Router.extend({
+            routes: {
+                "": "start", // Пустой hash-тэг
+                "!/": "start", // Начальная страница
+                "!/success": "success", // Блок удачи
+                "!/error": "error" // Блок ошибки
+            },
+
+            start: function () {
+                appState.set({state: "start"});
+            },
+
+            success: function () {
+                appState.set({state: "success"});
+            },
+
+            error: function () {
+                appState.set({state: "error"});
+            }
+        });
+
+        var BlockView = Backbone.View.extend({
+            el: $('#block'),
+
+            templates: {
+                "start": _.template($("#start").html()),
+                "success": _.template($("#success").html()),
+                "error": _.template($("#error").html())
+            },
+
+            initialize: function() {
+                this.model.bind('change', this.render, this);
+            },
+
+            events: {
+                "click input:button": "check"
+            },
+
+            check: function() {
+                var username = this.$el.find("input:text").val();
+                var find = (username == "test");
+                appState.set({
+                    "state": find ? "success": "error",
+                    "username": username
+                });
+            },
+
+            render: function() {
+                var state = this.model.get("state");
+                $(this.el).html(this.templates[state](this.model.toJSON()));
+                return this;
+            }
+        });
+
+        var controller = new Controller();
+        var blockView = new BlockView({model: appState});
+
+        appState.bind("change:state", function() {
+            var state = this.get("state");
+            if (state == "start") {
+                controller.navigate("!/", false);
+            } else {
+                controller.navigate("!/" + state, false);
+            }
+
+        });
+        appState.trigger("change");
+
+
+
+        Backbone.history.start();  // Запускаем HTML5 History push
+
+    });
+</script>
+
+<script type="text/template" id="start">
+    <div class="start">
+        <div class="userplace">
+            <label for="username">Имя пользователя: </label>
+            <input type="text" id="username" />
+        </div>
+        <div class="buttonplace">
+            <input type="button" value="Проверить" />
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="error">
+    <div class="error">
+        Ошибка. Пользователь  <%= username %> не найден.
+        <a href="#!/">Go back</a>
+    </div>
+</script>
+
+<script type="text/template" id="success">
+    <div class="success">
+        Пользователь <%= username %> найден.
+        <a href="#!/">Go back</a>
+    </div>
+</script>
+
+
+</html>
